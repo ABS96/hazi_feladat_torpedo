@@ -3,7 +3,7 @@
 #include <stdbool.h>
 
 #define NUMBER_OF_SHIPS_PER_GAME 4
-#define NUMBER_OF_LOCATIONS 28
+#define NUMBER_OF_LOCATIONS 7 * 4 * 2
 
 typedef struct {
 	bool exists;
@@ -11,5 +11,4 @@ typedef struct {
 } ship;
 
 void initializeGame();
-void selectShip(int dir);
-bool fireTorpedo(int location);
+void gameManager();
