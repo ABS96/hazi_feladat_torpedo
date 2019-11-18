@@ -23,7 +23,7 @@ void initializeGame() {
 		ships[i].destroyed[1] = false;
 	}
 	// hajók elhelyezése véletlenszerûen
-	srand(time(NULL)); // #TODO: legyen random a generálás
+	srand(time(NULL));
 
 	const int max_step = NUMBER_OF_LOCATIONS / (2 * NUMBER_OF_SHIPS_PER_GAME) - 1; // a legnagyobb lépés 2 hajó között akkora legyen, hogy így is elférjenek a kijelzõn
 	int location = rand() % max_step; // az elsõ hajó helyének kijelölése
@@ -59,18 +59,18 @@ void selectShip(int dir) {
 
 void checkWin() {
 	if (parts_left == 0) {
-		// #TODO win kijelzése
+		animWin();
 		initializeGame();
 	}
 }
 
 bool fireTorpedo(int location) {
 	bool will_be_hit = ships[location / 2].exists && ships[location / 2].destroyed[location % 2] == false;
-	// #TODO animate shot
+	animShot();
 	if (will_be_hit) {
 		ships[location / 2].destroyed[location % 2] = true;
 		--parts_left;
-		// #TODO animate hit
+		animHit();
 		displayShip(location / 2, ships[location / 2].destroyed[0], ships[location / 2].destroyed[0]);
 		checkWin();
 	}

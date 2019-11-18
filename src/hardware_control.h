@@ -12,3 +12,6 @@ int receiveCharacter();
 void transmitCharacter(int character);
 void displayShip(int location, bool state0, bool state1);
 void displayShots(int shots);
+void animShot();
+void animHit();
+void animWin();

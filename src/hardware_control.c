@@ -67,7 +67,7 @@ void initializeHardware() {
 }
 
 void delay() {
-   for(int d=0;d<DELAY_LENGTH;d++); // #TODO ez legyen hardveres
+   for(int d = 0; d < DELAY_LENGTH; d++);
 }
 
 void clearDisplay() {
@@ -114,4 +114,37 @@ int receiveCharacter() {
 
 void transmitCharacter(int character) {
 	USART_Tx(UART0, character);
+}
+
+void animShot() {
+	for(int i = 0; i < 8; ++i) {
+		SegmentLCD_ARing(i, 1);   // A-Ring szegmensek bekapcsolása sorban
+		delay();
+	}
+
+	for(int i = 0; i < 8; ++i) {  // A-Ring szegmensek kikapcsolása
+		SegmentLCD_ARing(i, 0);   // ha nincs találat, marad is kikapcsolva
+	}
+}
+
+void animHit() {                  // találat esetén az összes szegmens felvillan 5-ször
+	for(int i = 0; i < 5; ++i) {
+		for(int j = 0; j < 8; ++j) {   // A0 .. A7 egyszerre bekapcsol
+			SegmentLCD_ARing(j, 1);
+		}
+		delay();
+		for(int k = 0; k < 8; ++k) {  // A0 .. A7 egyszerre kikapcsol
+			SegmentLCD_ARing(k, 0);
+		}
+		delay();
+	}
+}
+
+void animWin() {
+	for(int i = 0; i < 4; ++i) {
+		SegmentLCD_Symbol(LCD_SYMBOL_GECKO, 1);
+		delay();
+		SegmentLCD_Symbol(LCD_SYMBOL_GECKO, 0);
+	    delay();
+	}
 }
