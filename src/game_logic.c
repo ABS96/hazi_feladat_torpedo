@@ -5,6 +5,7 @@
 #include <time.h>
 
 typedef enum {
+	init,
 	select,
 	debug
 } gameState;
@@ -12,10 +13,16 @@ typedef enum {
 static int shots;
 static int parts_left;
 static int selected;
+static int cycleCount;
 static ship ships[NUMBER_OF_LOCATIONS / 2];
 static gameState state;
 
 void initializeGame() {
+	cycleCount = 0;
+	state = init;
+}
+
+void newGame() {
 	// hajók tömbjének törlése
 	for (int i = 0; i < NUMBER_OF_LOCATIONS / 2; ++i) {
 		ships[i].exists = false;
@@ -23,7 +30,7 @@ void initializeGame() {
 		ships[i].destroyed[1] = false;
 	}
 	// hajók elhelyezése véletlenszerûen
-	srand(time(NULL));
+	srand(cycleCount);
 
 	const int max_step = NUMBER_OF_LOCATIONS / (2 * NUMBER_OF_SHIPS_PER_GAME) - 1; // a legnagyobb lépés 2 hajó között akkora legyen, hogy így is elférjenek a kijelzõn
 	int location = rand() % max_step; // az elsõ hajó helyének kijelölése
@@ -82,7 +89,17 @@ void gameManager() {
 	int input;
 	bool segment0;
 	bool segment1;
+
+	input = receiveCharacter();
+
 	switch (state) {
+		case init:
+			if (input != -1) {
+				newGame();
+			} else {
+				++cycleCount;
+			}
+			break;
 		case select:
 				blink_state = !blink_state;
 				segment0 = selected % 2 == 0 ? blink_state : ships[selected / 2].destroyed[0];
@@ -90,7 +107,6 @@ void gameManager() {
 				displayShip(selected / 2, segment0, segment1);
 				delay();
 
-				input = receiveCharacter();
 				switch (input) {
 					case 'a': // a: balra
 					case 'd': // d: jobbra
@@ -113,7 +129,6 @@ void gameManager() {
 				for (int i = 0; i < NUMBER_OF_LOCATIONS / 2; ++i) {
 					displayShip(i, ships[i].exists, ships[i].exists);
 				}
-				input = receiveCharacter();
 				if (input == 'g') {
 					for (int i = 0; i < NUMBER_OF_LOCATIONS / 2; ++i) {
 						displayShip(i, ships[i].destroyed[0], ships[i].destroyed[1]);
