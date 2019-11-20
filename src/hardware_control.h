@@ -3,7 +3,7 @@
 #include <stdbool.h>
 
 #define CONFIGURATIONS_PER_CHAR 4
-#define DELAY_LENGTH 300000
+#define DELAY_LENGTH 140000
 
 void initializeHardware();
 void clearDisplay();
