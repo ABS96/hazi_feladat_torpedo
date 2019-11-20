@@ -10,18 +10,27 @@ typedef enum {
 	debug
 } gameState;
 
-static int shots;
-static int parts_left;
-static int selected;
-static int cycleCount;
-static ship ships[NUMBER_OF_LOCATIONS / 2];
-static gameState state;
+static int shots;		// eddigi lövések száma
+static int parts_left;	// még elpusztítandó szegmensek száma
+static int selected;	// éppen aktív hajó
+static int cycle_count;	// random szám generálásához használt számláló
+static ship ships[NUMBER_OF_LOCATIONS / 2];	// hajók helyzete és állapota
+static gameState state;	// játék jelenlegi állapota
 
+// játék elõkészítése
 void initializeGame() {
-	cycleCount = 0;
+	cycle_count = 0;
+	selected = 0;
+	shots = 0;
+	parts_left = NUMBER_OF_SHIPS_PER_GAME * 2;
+
+	clearDisplay();
+	displayStartText();
+
 	state = init;
 }
 
+// játék elõkészítésének folytatása, miután megvan a random seed
 void newGame() {
 	// hajók tömbjének törlése
 	for (int i = 0; i < NUMBER_OF_LOCATIONS / 2; ++i) {
@@ -30,7 +39,7 @@ void newGame() {
 		ships[i].destroyed[1] = false;
 	}
 	// hajók elhelyezése véletlenszerûen
-	srand(cycleCount);
+	srand(cycle_count);
 
 	const int max_step = NUMBER_OF_LOCATIONS / (2 * NUMBER_OF_SHIPS_PER_GAME) - 1; // a legnagyobb lépés 2 hajó között akkora legyen, hogy így is elférjenek a kijelzõn
 	int location = rand() % max_step; // az elsõ hajó helyének kijelölése
@@ -39,15 +48,6 @@ void newGame() {
 		location += (rand() % (max_step - 4)) + 4; // legfeljebb max_step, de legalább egy karakternyi hely legyen a hajók között
 		ships[location].exists = true;
 	}
-
-	clearDisplay();
-
-	selected = 0;
-
-	shots = 0;
-	displayShots(shots);
-
-	parts_left = NUMBER_OF_SHIPS_PER_GAME * 2;
 
 	state = select;
 }
@@ -71,8 +71,10 @@ void checkWin() {
 	}
 }
 
-bool fireTorpedo(int location) {
+void fireTorpedo(int location) {
 	bool will_be_hit = ships[location / 2].exists && ships[location / 2].destroyed[location % 2] == false;
+	shots = shots + 1;
+	displayShots(shots);
 	animShot();
 	if (will_be_hit) {
 		ships[location / 2].destroyed[location % 2] = true;
@@ -81,30 +83,31 @@ bool fireTorpedo(int location) {
 		displayShip(location / 2, ships[location / 2].destroyed[0], ships[location / 2].destroyed[0]);
 		checkWin();
 	}
-	return will_be_hit;
 }
 
+// fõ loop, állapotgép
 void gameManager() {
 	static bool blink_state;
-	int input;
-	bool segment0;
-	bool segment1;
+	int input;			// UART-on érkezett karakter
+	bool segments[2];	// villogtatandó szegmensek
 
 	input = receiveCharacter();
 
 	switch (state) {
 		case init:
-			if (input != -1) {
-				newGame();
-			} else {
-				++cycleCount;
-			}
+				if (input != -1) {
+					newGame();
+					input = -1;
+				} else {
+					++cycle_count; // random szám generáláshoz
+				}
 			break;
 		case select:
 				blink_state = !blink_state;
-				segment0 = selected % 2 == 0 ? blink_state : ships[selected / 2].destroyed[0];
-				segment1 = selected % 2 == 1 ? blink_state : ships[selected / 2].destroyed[1];
-				displayShip(selected / 2, segment0, segment1);
+				for (int i = 0; i < 2; ++i) { // az egyik szegmens villog, a másik az aktuális állapotát mutatja
+					segments[i] = selected % 2 == i ? blink_state : ships[selected / 2].destroyed[i];
+				}
+				displayShip(selected / 2, segments[0], segments[1]);
 				delay();
 
 				switch (input) {
@@ -114,24 +117,24 @@ void gameManager() {
 						break;
 					case ' ': // space: lövés
 						fireTorpedo(selected);
-						displayShots(++shots);
 						break;
 					case 'g': // g: hajók helyzetének kijelzése
 						state = debug;
 						break;
+					case 'r': // r: játék újraindítása
+						state = init;
+						break;
 					default:
-						//if (input > 0)
-						//	transmitCharacter(input);
 						break;
 				}
 			break;
 		case debug:
 				for (int i = 0; i < NUMBER_OF_LOCATIONS / 2; ++i) {
-					displayShip(i, ships[i].exists, ships[i].exists);
+					displayShip(i, ships[i].exists, ships[i].exists); // összes hajó helyzetének mutatása
 				}
 				if (input == 'g') {
 					for (int i = 0; i < NUMBER_OF_LOCATIONS / 2; ++i) {
-						displayShip(i, ships[i].destroyed[0], ships[i].destroyed[1]);
+						displayShip(i, ships[i].destroyed[0], ships[i].destroyed[1]); // visszatérés a játékhoz, aktuális állapot kijelzése
 					}
 					state = select;
 				}

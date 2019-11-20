@@ -1,5 +1,3 @@
-//#pragma once
-
 #include "hardware_control.h"
 #include "em_chip.h"
 #include "em_cmu.h"
@@ -9,8 +7,10 @@
 #include "segmentlcd.h"
 #include "segmentlcd_individual.h"
 
+// alsó szegmensek értékének tárolására szolgáló struct
 static SegmentLCD_LowerCharSegments_TypeDef lowerCharSegments[SEGMENT_LCD_NUM_OF_LOWER_CHARS];
 
+// UART konfigurálása a 4. gyakorlat alapján
 void uartInit() {
 	// Enable clock for GPIO
 	CMU->HFPERCLKEN0 |= CMU_HFPERCLKEN0_GPIO;
@@ -52,69 +52,80 @@ void uartInit() {
 	UART0->ROUTE |= UART_ROUTE_TXPEN | UART_ROUTE_RXPEN;
 }
 
+// nem blokkoló karakter fogadás
 int USART_RxNonblocking(USART_TypeDef *usart) {
-	if (usart->STATUS & USART_STATUS_RXDATAV) {
-		return (int)(usart->RXDATA);
+	if (usart->STATUS & USART_STATUS_RXDATAV) { // ha az UART jelezte a státusz regiszterében, hogy jött adat,
+		return (int)(usart->RXDATA);			// akkor azt továbbítjuk
 	} else {
-		return -1;
+		return -1;	// különben -1-gyel jelezzük, hogy nem jött új adat
 	}
 }
 
+// board, LCD, és UART inicializálása
 void initializeHardware() {
 	CHIP_Init();
 	SegmentLCD_Init(false);
 	uartInit();
 }
 
+// egyszerû szoftveres késleltetés az animációkhoz
 void delay() {
    for(int d = 0; d < DELAY_LENGTH; d++);
 }
 
+// kijelzõ törlése
 void clearDisplay() {
-   for (uint8_t p = 0; p < SEGMENT_LCD_NUM_OF_LOWER_CHARS; p++) {
+	displayShots(0);
+	for (uint8_t p = 0; p < SEGMENT_LCD_NUM_OF_LOWER_CHARS; p++) {
 	  lowerCharSegments[p].raw = 0;
 	  SegmentLCD_LowerSegments(lowerCharSegments);
-   }
+	}
 }
 
-
+// kívánt állapot megjelenítése az adott "hajón"
 void displayShip(int location, bool state0, bool state1) {
-	const uint16_t map[] = {5, 4, 7, 11, 13, 9, 1, 2}; // hajó helyzetének leképezése szegmensekre
+	const uint16_t map[] = {5, 4, 7, 11, 13, 9, 1, 2}; // hajó helyzetének leképezése egy karakteren belül
 
 	int shiftBy[2] = {
 		map[(location % CONFIGURATIONS_PER_CHAR) * 2],
 		map[((location % CONFIGURATIONS_PER_CHAR) * 2) + 1]
-	};
+	}; // szegmensek kiválasztása
 
-	int charNumber = location / CONFIGURATIONS_PER_CHAR;
+	int charNumber = location / CONFIGURATIONS_PER_CHAR; // karakter kiválasztása
 
-	lowerCharSegments[charNumber].raw &= ~0 & ~(1 << shiftBy[0] | 1 << shiftBy[1]);		// aktuális helyen lévõ szegmensek törlése
+	lowerCharSegments[charNumber].raw &= ~0 & ~(1 << shiftBy[0] | 1 << shiftBy[1]);		// aktuális helyen lévõ szegmensek törlése maszkolással
 	lowerCharSegments[charNumber].raw |= (state0 << shiftBy[0] | state1 << shiftBy[1]);	// szegmensek bekapcsolása, amennyiben van rajtuk lelõtt hajó
 
-	SegmentLCD_LowerSegments(lowerCharSegments);
+	SegmentLCD_LowerSegments(lowerCharSegments); // alsó kijelzõ frissítése
 }
 
+// lövések számának kijelzése
 void displayShots(int shots) {
 	uint32_t output = 0;
-	// átalakítás BCD-be
+	// átalakítás BCD-be, hogy meg lehessen jeleníteni
     for (int i = 0; i < 4; ++i) {
-        output |= (shots % 10) << (4 * i);
-        shots /= 10;
+        output |= (shots % 10) << (4 * i);	// vesszük az aktuális legkisebb helyiértéket
+        shots /= 10;						// leosztunk 10-zel, így az egyel nagyobb helyiérték lesz a legkisebb
     }
-	SegmentLCD_UnsignedHex(output);
+	SegmentLCD_UnsignedHex(output); // felsõ kijelzõ frissítése
 }
 
+// debug függvény UART teszteléshez
 void echo() {
 	USART_Tx(UART0, USART_Rx(UART0));
 }
 
+// wrapper a karakter elvételéhez
 int receiveCharacter() {
 	return USART_RxNonblocking(UART0);
 }
 
-void transmitCharacter(int character) {
-	USART_Tx(UART0, character);
+// új játék kezdetekor szöveg kiírása
+void displayStartText() {
+	SegmentLCD_Write("Ready");
 }
+
+// Animációk
 
 void animShot() {
 	for(int i = 0; i < 8; ++i) {
